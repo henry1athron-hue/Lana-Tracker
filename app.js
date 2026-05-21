@@ -1,320 +1,217 @@
-// Data Store: Grouped by Day
-let dayLogs = JSON.parse(localStorage.getItem('groupedDayLogs')) || {};
-
-// DOM Elements
-const logContainer = document.getElementById('log-container');
-const btnLogDay = document.getElementById('btn-log-day');
-const loggingMenu = document.getElementById('logging-menu');
-const btnCloseMenu = document.getElementById('btn-close-menu');
-const tabBtns = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-
-// --- UI Interactions ---
-
-if (btnLogDay) {
-    btnLogDay.addEventListener('click', () => {
-        loggingMenu.classList.remove('hidden');
-        btnLogDay.style.display = 'none';
-        clearForms();
-    });
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker Registered"))
+        .catch(err => console.error("Service Worker Failed", err));
 }
 
-if (btnCloseMenu) {
-    btnCloseMenu.addEventListener('click', () => {
-        loggingMenu.classList.add('hidden');
-        btnLogDay.style.display = 'block';
-        clearForms();
-    });
-}
+// Navigation Logic
+const navBtns = document.querySelectorAll('.nav-btn');
+const views = document.querySelectorAll('.view');
+const headerTitle = document.getElementById('header-title');
 
-tabBtns.forEach(btn => {
+navBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
-        
+        navBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const target = document.getElementById(btn.getAttribute('data-tab'));
-        if (target) target.classList.add('active');
+
+        const targetId = btn.getAttribute('data-target');
+        views.forEach(v => v.classList.remove('active'));
+        document.getElementById(targetId).classList.add('active');
+
+        headerTitle.textContent = btn.getAttribute('data-title');
+
+        if(targetId === 'view-history') {
+            renderLogs();
+        }
     });
 });
 
-// --- Data Management ---
+// Data Management: Structured by Day Keys
+let dailyLogs = JSON.parse(localStorage.getItem('dailyGroupedLogs')) || {};
 
-function saveLog(type, data, editItemId = null, targetDateKey = null) {
+function saveLog(type, data, editId = null, existingDateKey = null) {
     const now = new Date();
-    // Use the existing date key if editing, otherwise generate today's date key (YYYY-MM-DD)
-    const dateKey = targetDateKey || now.toISOString().split('T')[0];
     
-    // Initialize the day if it doesn't exist
-    if (!dayLogs[dateKey]) {
-        dayLogs[dateKey] = {
-            dateStr: now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }),
-            items: []
-        };
+    // Assign to its original day if editing, otherwise assign to today
+    const dateKey = existingDateKey || now.toLocaleDateString('en-US').replace(/\//g, '-'); 
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+    if (!dailyLogs[dateKey]) {
+        dailyLogs[dateKey] = [];
     }
 
-    if (editItemId && editItemId !== "") {
-        // Find and update existing item within that specific day
-        const itemIndex = dayLogs[dateKey].items.findIndex(item => item.id === editItemId);
+    if (editId && editId !== "") {
+        // Find existing item and modify it
+        const itemIndex = dailyLogs[dateKey].findIndex(item => item.id === editId);
         if (itemIndex > -1) {
-            dayLogs[dateKey].items[itemIndex] = {
-                ...dayLogs[dateKey].items[itemIndex],
+            dailyLogs[dateKey][itemIndex] = {
+                ...dailyLogs[dateKey][itemIndex],
                 ...data,
-                editedAt: now.toISOString()
+                editedAt: timeStr
             };
         }
     } else {
-        // Create a new individual entry timestamped to right now
-        const newItem = {
+        // Create new item
+        const entry = {
             id: Date.now().toString(),
             type: type,
-            createdAt: now.toISOString(),
+            createdAt: timeStr,
             editedAt: null,
             ...data
         };
-        dayLogs[dateKey].items.push(newItem);
+        dailyLogs[dateKey].push(entry);
     }
 
-    // Sort items inside the day so the newest events appear at the top of the day's timeline
-    dayLogs[dateKey].items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    persistAndRender();
-    if (btnCloseMenu) btnCloseMenu.click();
+    localStorage.setItem('dailyGroupedLogs', JSON.stringify(dailyLogs));
+    clearAllForms();
 }
 
-function persistAndRender() {
-    localStorage.setItem('groupedDayLogs', JSON.stringify(dayLogs));
-    renderLogs();
+function clearAllForms() {
+    document.getElementById('form-food').reset();
+    document.getElementById('edit-id-food').value = '';
+    document.getElementById('date-key-food').value = '';
+
+    document.getElementById('form-meds').reset();
+    document.getElementById('edit-id-meds').value = '';
+    document.getElementById('date-key-meds').value = '';
+
+    document.getElementById('form-notes').reset();
+    document.getElementById('edit-id-notes').value = '';
+    document.getElementById('date-key-notes').value = '';
 }
 
-function clearForms() {
-    ['food', 'meds', 'notes'].forEach(type => {
-        const form = document.getElementById(`form-${type}`);
-        if (form) form.reset();
-        
-        const editIdInput = document.getElementById(`edit-id-${type}`);
-        if (editIdInput) editIdInput.value = '';
-        
-        const dateKeyInput = document.getElementById(`${type}-date-key`);
-        if (dateKeyInput) dateKeyInput.value = '';
-    });
-}
+// Form Submissions
+document.getElementById('form-food').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const editId = document.getElementById('edit-id-food').value;
+    const dateKey = document.getElementById('date-key-food').value;
+    saveLog('food', {
+        name: document.getElementById('food-name').value,
+        details: document.getElementById('food-details').value
+    }, editId, dateKey);
+    alert('Food logged!');
+});
 
-// Form Submit Listeners
-const formFood = document.getElementById('form-food');
-if (formFood) {
-    formFood.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const editId = document.getElementById('edit-id-food').value;
-        const dateKey = document.getElementById('food-date-key').value;
-        saveLog('food', {
-            name: document.getElementById('food-name').value,
-            cals: document.getElementById('food-cals').value
-        }, editId, dateKey);
-    });
-}
+document.getElementById('form-meds').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const editId = document.getElementById('edit-id-meds').value;
+    const dateKey = document.getElementById('date-key-meds').value;
+    saveLog('meds', {
+        name: document.getElementById('med-name').value,
+        dosage: document.getElementById('med-dosage').value
+    }, editId, dateKey);
+    alert('Medication logged!');
+});
 
-const formMeds = document.getElementById('form-meds');
-if (formMeds) {
-    formMeds.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const editId = document.getElementById('edit-id-meds').value;
-        const dateKey = document.getElementById('meds-date-key').value;
-        saveLog('meds', {
-            name: document.getElementById('med-name').value,
-            dosage: document.getElementById('med-dosage').value
-        }, editId, dateKey);
-    });
-}
+document.getElementById('form-notes').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const editId = document.getElementById('edit-id-notes').value;
+    const dateKey = document.getElementById('date-key-notes').value;
+    saveLog('notes', {
+        text: document.getElementById('note-text').value
+    }, editId, dateKey);
+    alert('Note saved!');
+});
 
-const formNotes = document.getElementById('form-notes');
-if (formNotes) {
-    formNotes.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const editId = document.getElementById('edit-id-notes').value;
-        const dateKey = document.getElementById('notes-date-key').value;
-        saveLog('notes', {
-            text: document.getElementById('note-text').value
-        }, editId, dateKey);
-    });
-}
-
-// --- Rendering ---
-
-function formatTime(isoString) {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+// Rendering Timeline Logs
+const logContainer = document.getElementById('log-container');
 
 function renderLogs() {
-    if (!logContainer) return;
     logContainer.innerHTML = '';
-    
-    // Get sorted array of dates (newest calendar days first)
-    const sortedDateKeys = Object.keys(dayLogs).sort((a, b) => new Date(b) - new Date(a));
+    const dateKeys = Object.keys(dailyLogs).sort((a, b) => new Date(b.replace(/-/g, '/')) - new Date(a.replace(/-/g, '/')));
 
-    if (sortedDateKeys.length === 0) {
-        logContainer.innerHTML = '<p style="text-align:center; color:#777; margin-top:2rem;">No entries logged yet.</p>';
+    if (dateKeys.length === 0) {
+        logContainer.innerHTML = '<p style="text-align:center; color:#7f8c8d; padding: 2rem;">No entries found.</p>';
         return;
     }
 
-    sortedDateKeys.forEach(dateKey => {
-        const dayData = dayLogs[dateKey];
-        if (!dayData || !dayData.items || dayData.items.length === 0) return; 
+    dateKeys.forEach(dateKey => {
+        const items = dailyLogs[dateKey];
+        if (items.length === 0) return;
 
-        const dayCard = document.createElement('div');
-        dayCard.className = 'day-card';
+        // Group container
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'day-group-container';
         
-        const foodCount = dayData.items.filter(i => i.type === 'food').length;
-        const medsCount = dayData.items.filter(i => i.type === 'meds').length;
-        const notesCount = dayData.items.filter(i => i.type === 'notes').length;
+        // Header block
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'day-header-toggle';
+        headerDiv.textContent = dateKey.replace(/-/g, '/'); // Formats back to 11/10/2026
+        headerDiv.addEventListener('click', () => {
+            groupDiv.classList.toggle('collapsed');
+        });
 
-        dayCard.innerHTML = `
-            <div class="day-header" onclick="toggleDayCollapse('${dateKey}')">
-                <div class="day-title-container">
-                    <span class="arrow-icon" id="arrow-${dateKey}">▶</span>
-                    <h3 class="day-title">${dayData.dateStr}</h3>
+        // Expanded content workspace
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'day-content-area';
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = `log-card ${item.type}`;
+
+            let contentHTML = '';
+            if (item.type === 'food') {
+                contentHTML = `<div><div class="log-title">🍏 ${item.name}</div><div class="log-detail">${item.details || ''}</div></div>`;
+            } else if (item.type === 'meds') {
+                contentHTML = `<div><div class="log-title">💊 ${item.name}</div><div class="log-detail">${item.dosage}</div></div>`;
+            } else if (item.type === 'notes') {
+                contentHTML = `<div><div class="log-title">📝 Note</div><div class="log-detail">${item.text}</div></div>`;
+            }
+
+            const editTimestamp = item.editedAt ? `<span style="color: #e67e22; font-size:0.75rem; block-size:auto;"> (Edited: ${item.editedAt})</span>` : '';
+
+            card.innerHTML = `
+                <div style="flex:1;">
+                    <div class="log-meta">Added: ${item.createdAt} ${editTimestamp}</div>
+                    ${contentHTML}
                 </div>
-                <div class="day-badges">
-                    ${foodCount ? `<span>🍏 ${foodCount}</span>` : ''}
-                    ${medsCount ? `<span>💊 ${medsCount}</span>` : ''}
-                    ${notesCount ? `<span>📝 ${notesCount}</span>` : ''}
+                <div style="display:flex; gap: 4px;">
+                    <button class="delete-btn" style="background:#3498db;" onclick="editItem('${dateKey}', '${item.id}')">✏️</button>
+                    <button class="delete-btn" onclick="deleteItem('${dateKey}', '${item.id}')">X</button>
                 </div>
-            </div>
-            <div class="day-content hidden" id="content-${dateKey}">
-                <div class="timeline-container">
-                    ${dayData.items.map(item => buildItemHTML(item, dateKey)).join('')}
-                </div>
-                <button class="delete-day-btn" onclick="deleteEntireDay('${dateKey}')">Delete Entire Day</button>
-            </div>
-        `;
-        logContainer.appendChild(dayCard);
+            `;
+            contentDiv.appendChild(card);
+        });
+
+        groupDiv.appendChild(headerDiv);
+        groupDiv.appendChild(contentDiv);
+        logContainer.appendChild(groupDiv);
     });
 }
 
-function buildItemHTML(item, dateKey) {
-    let title = '';
-    let body = '';
-    
-    if (item.type === 'food') {
-        title = `🍏 ${item.name}`;
-        body = item.cals ? `${item.cals} Calories` : 'Logged';
-    } else if (item.type === 'meds') {
-        title = `💊 ${item.name}`;
-        body = `Dosage: ${item.dosage}`;
-    } else if (item.type === 'notes') {
-        title = `📝 General Note`;
-        body = item.text;
+// Global actions exposed safely to window scope
+window.deleteItem = function(dateKey, id) {
+    if(confirm('Delete this entry?')) {
+        dailyLogs[dateKey] = dailyLogs[dateKey].filter(item => item.id !== id);
+        if(dailyLogs[dateKey].length === 0) {
+            delete dailyLogs[dateKey];
+        }
+        localStorage.setItem('dailyGroupedLogs', JSON.stringify(dailyLogs));
+        renderLogs();
     }
-
-    const editStamp = item.editedAt ? `<span class="item-edited"> (Edited ${formatTime(item.editedAt)})</span>` : '';
-
-    return `
-        <div class="timeline-item ${item.type}">
-            <div class="item-meta">
-                <span class="item-time">${formatTime(item.createdAt)}</span>
-                ${editStamp}
-            </div>
-            <div class="item-title">${title}</div>
-            <div class="item-body">${body}</div>
-            <div class="item-actions">
-                <button class="action-link edit-link" onclick="event.stopPropagation(); editItem('${dateKey}', '${item.id}')">Edit</button>
-                <button class="action-link delete-link" onclick="event.stopPropagation(); deleteItem('${dateKey}', '${item.id}')">Delete</button>
-            </div>
-        </div>
-    `;
 }
 
-// --- Accordion Logic ---
+window.editItem = function(dateKey, id) {
+    const item = dailyLogs[dateKey].find(item => item.id === id);
+    if(!item) return;
 
-window.toggleDayCollapse = function(dateKey) {
-    const content = document.getElementById(`content-${dateKey}`);
-    const arrow = document.getElementById(`arrow-${dateKey}`);
-    
-    if (content && content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        if (arrow) arrow.style.transform = 'rotate(90deg)';
-    } else if (content) {
-        content.classList.add('hidden');
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
-    }
-};
-
-// --- Operations inside Dropdowns ---
-
-window.deleteItem = function(dateKey, itemId) {
-    if (confirm('Remove this item from the day?')) {
-        dayLogs[dateKey].items = dayLogs[dateKey].items.filter(item => item.id !== itemId);
-        if (dayLogs[dateKey].items.length === 0) {
-            delete dayLogs[dateKey];
-        }
-        persistAndRender();
-    }
-};
-
-window.deleteEntireDay = function(dateKey) {
-    if (confirm(`Are you completely sure you want to clear all data for this day?`)) {
-        delete dayLogs[dateKey];
-        persistAndRender();
-    }
-};
-
-window.editItem = function(dateKey, itemId) {
-    const day = dayLogs[dateKey];
-    if (!day) return;
-    const item = day.items.find(i => i.id === itemId);
-    if (!item) return;
-
-    if (btnLogDay) btnLogDay.click(); // Open menu view
-    
     if (item.type === 'food') {
-        const tab = document.querySelector('[data-tab="tab-food"]');
-        if (tab) tab.click();
+        document.querySelector('[data-target="view-food"]').click();
         document.getElementById('edit-id-food').value = item.id;
-        document.getElementById('food-date-key').value = dateKey;
+        document.getElementById('date-key-food').value = dateKey;
         document.getElementById('food-name').value = item.name;
-        document.getElementById('food-cals').value = item.cals || '';
+        document.getElementById('food-details').value = item.details || '';
     } else if (item.type === 'meds') {
-        const tab = document.querySelector('[data-tab="tab-meds"]');
-        if (tab) tab.click();
+        document.querySelector('[data-target="view-meds"]').click();
         document.getElementById('edit-id-meds').value = item.id;
-        document.getElementById('meds-date-key').value = dateKey;
+        document.getElementById('date-key-meds').value = dateKey;
         document.getElementById('med-name').value = item.name;
         document.getElementById('med-dosage').value = item.dosage;
     } else if (item.type === 'notes') {
-        const tab = document.querySelector('[data-tab="tab-notes"]');
-        if (tab) tab.click();
+        document.querySelector('[data-target="view-notes"]').click();
         document.getElementById('edit-id-notes').value = item.id;
-        document.getElementById('notes-date-key').value = dateKey;
+        document.getElementById('date-key-notes').value = dateKey;
         document.getElementById('note-text').value = item.text;
     }
-};
-
-// Startup initialization
-renderLogs();
-
-// --- Accordion Logic ---
-
-window.toggleDayCollapse = function(dateKey) {
-    const content = document.getElementById(`content-${dateKey}`);
-    const arrow = document.getElementById(`arrow-${dateKey}`);
-    
-    if (content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        arrow.style.transform = 'rotate(90deg)';
-    } else {
-        content.classList.add('hidden');
-        arrow.style.transform = 'rotate(0deg)';
-    }
-};
-
-// --- Operations inside Dropdowns ---
-
-window.deleteItem = function(dateKey, itemId) {
-    if (confirm('Remove this item from the day?')) {
-        dayLogs[dateKey].items = dayLogs[dateKey].items.filter(item => item.id !== itemId);
-        // Clean up empty days entirely
-        if (dayLogs[dateKey].items.length === 0) {
-            delete dayLogs[dateKey];
-        }
-        persistAndRender();
+}
