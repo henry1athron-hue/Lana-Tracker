@@ -136,4 +136,40 @@ input, textarea { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px s
     .action-area { flex: none; padding: 1rem; border-top: 1px solid var(--border); }
     #logging-menu { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 100%; margin-top: 0; border-radius: 20px 20px 0 0; z-index: 100; max-height: 80vh; overflow-y: auto; }
     #btn-log-day { width: 100%; }
+ /* Custom Time Input Group */
+.time-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
 }
+
+.time-group label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.time-group input[type="time"] {
+    width: auto;
+    margin-bottom: 0;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    font-weight: bold;
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+/* Ensure the time input focus doesn't break the layout */
+.time-group input[type="time"]:focus {
+    outline: none;
+    background: #eef2f5;
+    border-radius: 4px;
+}
+}
+
