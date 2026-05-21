@@ -1,164 +1,234 @@
 :root {
-    --primary: #3498db;
-    --bg-color: #f8f9fa;
-    --text-main: #2c3e50;
+    --bg-color: #f0f2f5;
     --card-bg: #ffffff;
-    --nav-bg: #ffffff;
+    --primary: #4a90e2;
+    --text-main: #333;
+    --text-muted: #777;
+    --border: #e1e4e8;
 }
 
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-main);
+    overflow: hidden; /* Prevent body scroll, manage in containers */
+}
+
+/* App Layout */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Left Sidebar (Logs) */
+.log-sidebar {
+    width: 400px;
+    background: var(--bg-color);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
 }
 
-header {
-    background-color: var(--primary);
-    color: white;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    z-index: 10;
+.sidebar-header {
+    padding: 1.5rem 1rem;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    z-index: 2;
 }
 
-main {
+.log-scroll-area {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
-    padding-bottom: 80px; /* Space for nav */
 }
 
-.view {
-    display: none;
-    animation: fadeIn 0.2s ease-in;
-}
-
-.view.active {
-    display: block;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.input-form {
+/* Right Area (Actions) */
+.action-area {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    background: var(--card-bg);
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-input, textarea, select {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 16px; /* Prevents iOS zoom */
-}
-
-button[type="submit"] {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    padding: 14px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button[type="submit"]:active {
-    opacity: 0.8;
-}
-
-/* History Logs */
-.history-controls {
-    margin-bottom: 1rem;
-}
-
-.log-card {
-    background: var(--card-bg);
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 0.8rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    border-left: 4px solid var(--primary);
-    display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: var(--card-bg);
+    position: relative;
 }
 
-.log-card.food { border-color: #2ecc71; }
-.log-card.meds { border-color: #e74c3c; }
-.log-card.notes { border-color: #f1c40f; }
-
-.log-meta {
-    font-size: 0.8rem;
-    color: #7f8c8d;
-    margin-bottom: 4px;
-}
-
-.log-title {
-    font-weight: bold;
-    font-size: 1.1rem;
-}
-
-.log-detail {
-    font-size: 0.95rem;
-    color: #34495e;
-    margin-top: 4px;
-}
-
-.delete-btn {
-    background: #ff4757;
+.action-btn {
+    background: var(--primary);
     color: white;
     border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    padding: 1rem 3rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border-radius: 30px;
     cursor: pointer;
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+    transition: transform 0.1s;
 }
 
-/* Bottom Nav */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
+.action-btn:active { transform: scale(0.95); }
+
+/* Logging Menu */
+#logging-menu {
     width: 100%;
-    background: var(--nav-bg);
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    max-width: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-top: 2rem;
 }
 
-.nav-btn {
+#logging-menu.hidden { display: none; }
+
+.menu-tabs {
+    display: flex;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.tab-btn {
+    flex: 1;
     background: none;
     border: none;
-    color: #95a5a6;
-    font-size: 0.8rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+    padding: 0.8rem;
+    font-size: 1rem;
+    color: var(--text-muted);
     cursor: pointer;
 }
 
-.nav-btn.active {
+.tab-btn.active {
     color: var(--primary);
+    border-bottom: 3px solid var(--primary);
     font-weight: bold;
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.save-btn {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.close-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    padding: 12px;
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+/* Log Cards */
+.log-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 5px solid #ccc;
+}
+
+.log-card.food { border-left-color: #2ecc71; }
+.log-card.meds { border-left-color: #e74c3c; }
+.log-card.notes { border-left-color: #f1c40f; }
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.log-time {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.log-edit-time {
+    font-size: 0.75rem;
+    color: #e67e22;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.log-title { font-weight: bold; font-size: 1.1rem; }
+.log-body { font-size: 0.95rem; margin-top: 0.5rem; line-height: 1.4; white-space: pre-wrap; }
+
+.card-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-edit { background: #eee; color: #333; }
+.btn-delete { background: #fee; color: #e74c3c; }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .app-layout { flex-direction: column; }
+    
+    .log-sidebar {
+        width: 100%;
+        flex: 1; /* Takes up available space */
+        border-right: none;
+    }
+
+    .action-area {
+        flex: none;
+        padding: 1rem;
+        background: var(--card-bg);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    }
+
+    #logging-menu {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: 100%;
+        margin-top: 0;
+        border-radius: 20px 20px 0 0;
+        z-index: 100;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    #btn-log-day { width: 100%; }
 }
