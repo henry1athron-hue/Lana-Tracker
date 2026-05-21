@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Daily Tracker</title>
+    <title>Daily Health Tracker</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
@@ -12,7 +12,7 @@
     <div class="app-layout">
         <aside class="log-sidebar">
             <div class="sidebar-header">
-                <h2>Your Timeline</h2>
+                <h2>Daily History Logs</h2>
             </div>
             <div id="log-container" class="log-scroll-area">
                 </div>
@@ -31,26 +31,29 @@
                 <div class="tab-content active" id="tab-food">
                     <form id="form-food">
                         <input type="hidden" id="edit-id-food">
+                        <input type="hidden" id="food-date-key">
                         <input type="text" id="food-name" placeholder="What did you eat?" required>
                         <input type="text" id="food-cals" placeholder="Calories (Optional)">
-                        <button type="submit" class="save-btn">Save Food</button>
+                        <button type="submit" class="save-btn">Save Entry</button>
                     </form>
                 </div>
 
                 <div class="tab-content" id="tab-meds">
                     <form id="form-meds">
                         <input type="hidden" id="edit-id-meds">
+                        <input type="hidden" id="meds-date-key">
                         <input type="text" id="med-name" placeholder="Medication Name" required>
-                        <input type="text" id="med-dosage" placeholder="Dosage (e.g., 200mg)" required>
-                        <button type="submit" class="save-btn">Save Medication</button>
+                        <input type="text" id="med-dosage" placeholder="Dosage (e.g., 50mg)" required>
+                        <button type="submit" class="save-btn">Save Entry</button>
                     </form>
                 </div>
 
                 <div class="tab-content" id="tab-notes">
                     <form id="form-notes">
                         <input type="hidden" id="edit-id-notes">
+                        <input type="hidden" id="notes-date-key">
                         <textarea id="note-text" placeholder="How are you feeling right now?" rows="5" required></textarea>
-                        <button type="submit" class="save-btn">Save Note</button>
+                        <button type="submit" class="save-btn">Save Entry</button>
                     </form>
                 </div>
                 
