@@ -17,7 +17,6 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-main);
-    overflow: hidden; 
 }
 
 /* App Layout */
@@ -90,6 +89,41 @@ input, textarea { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px s
 .save-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
 .close-btn { width: 100%; background: transparent; color: var(--text-muted); border: none; padding: 12px; margin-top: 0.5rem; cursor: pointer; }
 
+/* Inline DateTime Alignment */
+.datetime-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.time-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.time-group label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.time-group input {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-weight: bold;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+.time-group input:focus { outline: none; }
+
 /* Expandable Day Grouping */
 .day-group {
     background: var(--card-bg);
@@ -116,9 +150,9 @@ input, textarea { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px s
 /* Log Cards inside Days */
 .log-card { padding: 0.8rem; border-left: 4px solid #ccc; background: #fff; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 .log-card.food { border-left-color: #2ecc71; }
+.log-card.water { border-left-color: #3498db; }
 .log-card.meds { border-left-color: #e74c3c; }
 .log-card.notes { border-left-color: #f1c40f; }
-.log-card.water { border-left-color: #3498db; }
 
 .log-meta { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
 .log-edit-time { color: #e67e22; font-style: italic; }
@@ -130,47 +164,13 @@ input, textarea { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px s
 .btn-edit { background: #eee; color: #333; }
 .btn-delete { background: #fee; color: #e74c3c; }
 
-/* Mobile View */
+/* Mobile View Fixes Scroll */
 @media (max-width: 768px) {
-    .app-layout { flex-direction: column; }
-    .log-sidebar { width: 100%; flex: 1; border-right: none; }
-    .action-area { flex: none; padding: 1rem; border-top: 1px solid var(--border); }
-    #logging-menu { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 100%; margin-top: 0; border-radius: 20px 20px 0 0; z-index: 100; max-height: 80vh; overflow-y: auto; }
-    #btn-log-day { width: 100%; }
- /* Custom Time Input Group */
-.time-group {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    background: #f8f9fa;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
+    body { overflow: auto; } /* Let main screen settle nicely */
+    .app-layout { flex-direction: column; height: auto; min-height: 100vh; width: 100%; }
+    .log-sidebar { width: 100%; flex: none; border-right: none; height: auto; }
+    .log-scroll-area { overflow-y: visible; } /* Fixes mobile scroll capture */
+    .action-area { flex: none; padding: 1.5rem 1rem; border-top: 1px solid var(--border); }
+    #logging-menu { position: fixed; bottom: 0; left: 0; width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; z-index: 100; max-height: 85vh; overflow-y: auto; }
+    #btn-log-day { width: 100%; padding: 1.2rem; }
 }
-
-.time-group label {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.time-group input[type="time"] {
-    width: auto;
-    margin-bottom: 0;
-    padding: 6px 10px;
-    border: none;
-    background: transparent;
-    font-weight: bold;
-    color: var(--text-main);
-    font-size: 1rem;
-}
-
-/* Ensure the time input focus doesn't break the layout */
-.time-group input[type="time"]:focus {
-    outline: none;
-    background: #eef2f5;
-    border-radius: 4px;
-}
-}
-
