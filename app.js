@@ -1,5 +1,5 @@
-// Data Store
-let logs = JSON.parse(localStorage.getItem('timelineLogs')) || [];
+// Data Store: Grouped by Day
+let dayLogs = JSON.parse(localStorage.getItem('groupedDayLogs')) || {};
 
 // DOM Elements
 const logContainer = document.getElementById('log-container');
@@ -35,159 +35,205 @@ tabBtns.forEach(btn => {
 
 // --- Data Management ---
 
-function saveLog(type, data, editId = null) {
-    const now = new Date().toISOString();
+function saveLog(type, data, editItemId = null, targetDateKey = null) {
+    const now = new Date();
+    // Generate a standardized key for the day (e.g., "2026-05-20")
+    const dateKey = targetDateKey || now.toISOString().split('T')[0];
     
-    if (editId) {
-        // Update existing log
-        const logIndex = logs.findIndex(l => l.id === editId);
-        if (logIndex > -1) {
-            logs[logIndex] = { ...logs[logIndex], ...data, editedAt: now };
+    // Initialize the day if it doesn't exist
+    if (!dayLogs[dateKey]) {
+        dayLogs[dateKey] = {
+            dateStr: now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }),
+            items: []
+        };
+    }
+
+    if (editItemId) {
+        // Find and update existing item within that specific day
+        const itemIndex = dayLogs[dateKey].items.findIndex(item => item.id === editItemId);
+        if (itemIndex > -1) {
+            dayLogs[dateKey].items[itemIndex] = {
+                ...dayLogs[dateKey].items[itemIndex],
+                ...data,
+                editedAt: now.toISOString()
+            };
         }
     } else {
-        // Create new log
-        const entry = {
+        // Create a new individual entry timestamped to right now
+        const newItem = {
             id: Date.now().toString(),
             type: type,
-            createdAt: now,
+            createdAt: now.toISOString(),
             editedAt: null,
             ...data
         };
-        logs.push(entry);
+        dayLogs[dateKey].items.push(newItem);
     }
 
-    // Sort by creation time, newest first
-    logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    localStorage.setItem('timelineLogs', JSON.stringify(logs));
-    
-    renderLogs();
+    // Sort items inside the day so the newest events appear at the top of the day's timeline
+    dayLogs[dateKey].items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    persistAndRender();
     btnCloseMenu.click();
+}
+
+function persistAndRender() {
+    localStorage.setItem('groupedDayLogs', JSON.stringify(dayLogs));
+    renderLogs();
 }
 
 function clearForms() {
     document.getElementById('form-food').reset();
     document.getElementById('edit-id-food').value = '';
+    document.getElementById('food-date-key').value = '';
     
     document.getElementById('form-meds').reset();
     document.getElementById('edit-id-meds').value = '';
+    document.getElementById('meds-date-key').value = '';
     
     document.getElementById('form-notes').reset();
     document.getElementById('edit-id-notes').value = '';
+    document.getElementById('notes-date-key').value = '';
 }
 
-// Form Listeners
+// Form Submit Listeners
 document.getElementById('form-food').addEventListener('submit', (e) => {
     e.preventDefault();
     const editId = document.getElementById('edit-id-food').value;
+    const dateKey = document.getElementById('food-date-key').value;
     saveLog('food', {
         name: document.getElementById('food-name').value,
         cals: document.getElementById('food-cals').value
-    }, editId);
+    }, editId, dateKey);
 });
 
 document.getElementById('form-meds').addEventListener('submit', (e) => {
     e.preventDefault();
     const editId = document.getElementById('edit-id-meds').value;
+    const dateKey = document.getElementById('meds-date-key').value;
     saveLog('meds', {
         name: document.getElementById('med-name').value,
         dosage: document.getElementById('med-dosage').value
-    }, editId);
+    }, editId, dateKey);
 });
 
 document.getElementById('form-notes').addEventListener('submit', (e) => {
     e.preventDefault();
     const editId = document.getElementById('edit-id-notes').value;
+    const dateKey = document.getElementById('notes-date-key').value;
     saveLog('notes', {
         text: document.getElementById('note-text').value
-    }, editId);
+    }, editId, dateKey);
 });
 
 // --- Rendering ---
 
 function formatTime(isoString) {
     const date = new Date(isoString);
-    return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function renderLogs() {
     logContainer.innerHTML = '';
     
-    if (logs.length === 0) {
-        logContainer.innerHTML = '<p style="text-align:center; color:#777; margin-top:2rem;">Your day is empty. Start logging!</p>';
+    // Get sorted array of dates (newest calendar days first)
+    const sortedDateKeys = Object.keys(dayLogs).sort((a, b) => new Date(b) - new Date(a));
+
+    if (sortedDateKeys.length === 0) {
+        logContainer.innerHTML = '<p style="text-align:center; color:#777; margin-top:2rem;">No entries logged yet.</p>';
         return;
     }
 
-    logs.forEach(log => {
-        const div = document.createElement('div');
-        div.className = `log-card ${log.type}`;
+    sortedDateKeys.forEach(dateKey => {
+        const dayData = dayLogs[dateKey];
+        if (dayData.items.length === 0) return; // Skip empty days if all items were deleted
 
-        let contentHTML = '';
-        let titleHTML = '';
+        const dayCard = document.createElement('div');
+        dayCard.className = 'day-card';
+        
+        // Count entries for the badge preview
+        const foodCount = dayData.items.filter(i => i.type === 'food').length;
+        const medsCount = dayData.items.filter(i => i.type === 'meds').length;
+        const notesCount = dayData.items.filter(i => i.type === 'notes').length;
 
-        if (log.type === 'food') {
-            titleHTML = '🍏 ' + log.name;
-            contentHTML = log.cals ? `${log.cals} Calories` : 'No calories noted';
-        } else if (log.type === 'meds') {
-            titleHTML = '💊 ' + log.name;
-            contentHTML = `Dosage: ${log.dosage}`;
-        } else if (log.type === 'notes') {
-            titleHTML = '📝 Note';
-            contentHTML = log.text;
-        }
-
-        const editTimeHTML = log.editedAt ? `<div class="log-edit-time">Last edited: ${formatTime(log.editedAt)}</div>` : '';
-
-        div.innerHTML = `
-            <div class="log-header">
-                <div>
-                    <div class="log-title">${titleHTML}</div>
-                    <div class="log-time">Added: ${formatTime(log.createdAt)}</div>
-                    ${editTimeHTML}
+        dayCard.innerHTML = `
+            <div class="day-header" onclick="toggleDayCollapse('${dateKey}')">
+                <div class="day-title-container">
+                    <span class="arrow-icon" id="arrow-${dateKey}">▶</span>
+                    <h3 class="day-title">${dayData.dateStr}</h3>
+                </div>
+                <div class="day-badges">
+                    ${foodCount ? `<span>🍏 ${foodCount}</span>` : ''}
+                    ${medsCount ? `<span>💊 ${medsCount}</span>` : ''}
+                    ${notesCount ? `<span>📝 ${notesCount}</span>` : ''}
                 </div>
             </div>
-            <div class="log-body">${contentHTML}</div>
-            <div class="card-actions">
-                <button class="btn-small btn-edit" onclick="editLog('${log.id}')">Edit</button>
-                <button class="btn-small btn-delete" onclick="deleteLog('${log.id}')">Delete</button>
+            <div class="day-content hidden" id="content-${dateKey}">
+                <div class="timeline-container">
+                    ${dayData.items.map(item => buildItemHTML(item, dateKey)).join('')}
+                </div>
+                <button class="delete-day-btn" onclick="deleteEntireDay('${dateKey}')">Delete Entire Day</button>
             </div>
         `;
-        logContainer.appendChild(div);
+        logContainer.appendChild(dayCard);
     });
 }
 
-// --- Edit & Delete ---
-
-window.deleteLog = function(id) {
-    if(confirm('Are you sure you want to delete this?')) {
-        logs = logs.filter(l => l.id !== id);
-        localStorage.setItem('timelineLogs', JSON.stringify(logs));
-        renderLogs();
-    }
-};
-
-window.editLog = function(id) {
-    const log = logs.find(l => l.id === id);
-    if (!log) return;
-
-    btnLogDay.click(); // Open menu
+function buildItemHTML(item, dateKey) {
+    let title = '';
+    let body = '';
     
-    // Switch to correct tab and populate
-    if (log.type === 'food') {
-        document.querySelector('[data-tab="tab-food"]').click();
-        document.getElementById('edit-id-food').value = log.id;
-        document.getElementById('food-name').value = log.name;
-        document.getElementById('food-cals').value = log.cals || '';
-    } else if (log.type === 'meds') {
-        document.querySelector('[data-tab="tab-meds"]').click();
-        document.getElementById('edit-id-meds').value = log.id;
-        document.getElementById('med-name').value = log.name;
-        document.getElementById('med-dosage').value = log.dosage;
-    } else if (log.type === 'notes') {
-        document.querySelector('[data-tab="tab-notes"]').click();
-        document.getElementById('edit-id-notes').value = log.id;
-        document.getElementById('note-text').value = log.text;
+    if (item.type === 'food') {
+        title = `🍏 ${item.name}`;
+        body = item.cals ? `${item.cals} Calories` : 'Logged';
+    } else if (item.type === 'meds') {
+        title = `💊 ${item.name}`;
+        body = `Dosage: ${item.dosage}`;
+    } else if (item.type === 'notes') {
+        title = `📝 General Note`;
+        body = item.text;
+    }
+
+    const editStamp = item.editedAt ? `<span class="item-edited"> (Edited ${formatTime(item.editedAt)})</span>` : '';
+
+    return `
+        <div class="timeline-item ${item.type}">
+            <div class="item-meta">
+                <span class="item-time">${formatTime(item.createdAt)}</span>
+                ${editStamp}
+            </div>
+            <div class="item-title">${title}</div>
+            <div class="item-body">${body}</div>
+            <div class="item-actions">
+                <button class="action-link edit-link" onclick="editItem('${dateKey}', '${item.id}')">Edit</button>
+                <button class="action-link delete-link" onclick="deleteItem('${dateKey}', '${item.id}')">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+// --- Accordion Logic ---
+
+window.toggleDayCollapse = function(dateKey) {
+    const content = document.getElementById(`content-${dateKey}`);
+    const arrow = document.getElementById(`arrow-${dateKey}`);
+    
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        arrow.style.transform = 'rotate(90deg)';
+    } else {
+        content.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
     }
 };
 
-// Initial Render
-renderLogs();
+// --- Operations inside Dropdowns ---
+
+window.deleteItem = function(dateKey, itemId) {
+    if (confirm('Remove this item from the day?')) {
+        dayLogs[dateKey].items = dayLogs[dateKey].items.filter(item => item.id !== itemId);
+        // Clean up empty days entirely
+        if (dayLogs[dateKey].items.length === 0) {
+            delete dayLogs[dateKey];
+        }
+        persistAndRender();
