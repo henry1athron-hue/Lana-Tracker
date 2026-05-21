@@ -1,6 +1,6 @@
 {
-  "name": "Wellness Tracker",
-  "short_name": "Wellness",
+  "name": "Lana Tracker",
+  "short_name": "Lana Tracker",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
