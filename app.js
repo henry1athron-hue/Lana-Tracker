@@ -11,17 +11,21 @@ const tabContents = document.querySelectorAll('.tab-content');
 
 // --- UI Interactions ---
 
-btnLogDay.addEventListener('click', () => {
-    loggingMenu.classList.remove('hidden');
-    btnLogDay.style.display = 'none';
-    clearForms();
-});
+if (btnLogDay) {
+    btnLogDay.addEventListener('click', () => {
+        loggingMenu.classList.remove('hidden');
+        btnLogDay.style.display = 'none';
+        clearForms();
+    });
+}
 
-btnCloseMenu.addEventListener('click', () => {
-    loggingMenu.classList.add('hidden');
-    btnLogDay.style.display = 'block';
-    clearForms();
-});
+if (btnCloseMenu) {
+    btnCloseMenu.addEventListener('click', () => {
+        loggingMenu.classList.add('hidden');
+        btnLogDay.style.display = 'block';
+        clearForms();
+    });
+}
 
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -29,7 +33,8 @@ tabBtns.forEach(btn => {
         tabContents.forEach(c => c.classList.remove('active'));
         
         btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
+        const target = document.getElementById(btn.getAttribute('data-tab'));
+        if (target) target.classList.add('active');
     });
 });
 
@@ -37,7 +42,7 @@ tabBtns.forEach(btn => {
 
 function saveLog(type, data, editItemId = null, targetDateKey = null) {
     const now = new Date();
-    // Generate a standardized key for the day (e.g., "2026-05-20")
+    // Use the existing date key if editing, otherwise generate today's date key (YYYY-MM-DD)
     const dateKey = targetDateKey || now.toISOString().split('T')[0];
     
     // Initialize the day if it doesn't exist
@@ -48,7 +53,7 @@ function saveLog(type, data, editItemId = null, targetDateKey = null) {
         };
     }
 
-    if (editItemId) {
+    if (editItemId && editItemId !== "") {
         // Find and update existing item within that specific day
         const itemIndex = dayLogs[dateKey].items.findIndex(item => item.id === editItemId);
         if (itemIndex > -1) {
@@ -74,7 +79,7 @@ function saveLog(type, data, editItemId = null, targetDateKey = null) {
     dayLogs[dateKey].items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     persistAndRender();
-    btnCloseMenu.click();
+    if (btnCloseMenu) btnCloseMenu.click();
 }
 
 function persistAndRender() {
@@ -83,48 +88,56 @@ function persistAndRender() {
 }
 
 function clearForms() {
-    document.getElementById('form-food').reset();
-    document.getElementById('edit-id-food').value = '';
-    document.getElementById('food-date-key').value = '';
-    
-    document.getElementById('form-meds').reset();
-    document.getElementById('edit-id-meds').value = '';
-    document.getElementById('meds-date-key').value = '';
-    
-    document.getElementById('form-notes').reset();
-    document.getElementById('edit-id-notes').value = '';
-    document.getElementById('notes-date-key').value = '';
+    ['food', 'meds', 'notes'].forEach(type => {
+        const form = document.getElementById(`form-${type}`);
+        if (form) form.reset();
+        
+        const editIdInput = document.getElementById(`edit-id-${type}`);
+        if (editIdInput) editIdInput.value = '';
+        
+        const dateKeyInput = document.getElementById(`${type}-date-key`);
+        if (dateKeyInput) dateKeyInput.value = '';
+    });
 }
 
 // Form Submit Listeners
-document.getElementById('form-food').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const editId = document.getElementById('edit-id-food').value;
-    const dateKey = document.getElementById('food-date-key').value;
-    saveLog('food', {
-        name: document.getElementById('food-name').value,
-        cals: document.getElementById('food-cals').value
-    }, editId, dateKey);
-});
+const formFood = document.getElementById('form-food');
+if (formFood) {
+    formFood.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('edit-id-food').value;
+        const dateKey = document.getElementById('food-date-key').value;
+        saveLog('food', {
+            name: document.getElementById('food-name').value,
+            cals: document.getElementById('food-cals').value
+        }, editId, dateKey);
+    });
+}
 
-document.getElementById('form-meds').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const editId = document.getElementById('edit-id-meds').value;
-    const dateKey = document.getElementById('meds-date-key').value;
-    saveLog('meds', {
-        name: document.getElementById('med-name').value,
-        dosage: document.getElementById('med-dosage').value
-    }, editId, dateKey);
-});
+const formMeds = document.getElementById('form-meds');
+if (formMeds) {
+    formMeds.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('edit-id-meds').value;
+        const dateKey = document.getElementById('meds-date-key').value;
+        saveLog('meds', {
+            name: document.getElementById('med-name').value,
+            dosage: document.getElementById('med-dosage').value
+        }, editId, dateKey);
+    });
+}
 
-document.getElementById('form-notes').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const editId = document.getElementById('edit-id-notes').value;
-    const dateKey = document.getElementById('notes-date-key').value;
-    saveLog('notes', {
-        text: document.getElementById('note-text').value
-    }, editId, dateKey);
-});
+const formNotes = document.getElementById('form-notes');
+if (formNotes) {
+    formNotes.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('edit-id-notes').value;
+        const dateKey = document.getElementById('notes-date-key').value;
+        saveLog('notes', {
+            text: document.getElementById('note-text').value
+        }, editId, dateKey);
+    });
+}
 
 // --- Rendering ---
 
@@ -134,6 +147,7 @@ function formatTime(isoString) {
 }
 
 function renderLogs() {
+    if (!logContainer) return;
     logContainer.innerHTML = '';
     
     // Get sorted array of dates (newest calendar days first)
@@ -146,12 +160,11 @@ function renderLogs() {
 
     sortedDateKeys.forEach(dateKey => {
         const dayData = dayLogs[dateKey];
-        if (dayData.items.length === 0) return; // Skip empty days if all items were deleted
+        if (!dayData || !dayData.items || dayData.items.length === 0) return; 
 
         const dayCard = document.createElement('div');
         dayCard.className = 'day-card';
         
-        // Count entries for the badge preview
         const foodCount = dayData.items.filter(i => i.type === 'food').length;
         const medsCount = dayData.items.filter(i => i.type === 'meds').length;
         const notesCount = dayData.items.filter(i => i.type === 'notes').length;
@@ -205,12 +218,80 @@ function buildItemHTML(item, dateKey) {
             <div class="item-title">${title}</div>
             <div class="item-body">${body}</div>
             <div class="item-actions">
-                <button class="action-link edit-link" onclick="editItem('${dateKey}', '${item.id}')">Edit</button>
-                <button class="action-link delete-link" onclick="deleteItem('${dateKey}', '${item.id}')">Delete</button>
+                <button class="action-link edit-link" onclick="event.stopPropagation(); editItem('${dateKey}', '${item.id}')">Edit</button>
+                <button class="action-link delete-link" onclick="event.stopPropagation(); deleteItem('${dateKey}', '${item.id}')">Delete</button>
             </div>
         </div>
     `;
 }
+
+// --- Accordion Logic ---
+
+window.toggleDayCollapse = function(dateKey) {
+    const content = document.getElementById(`content-${dateKey}`);
+    const arrow = document.getElementById(`arrow-${dateKey}`);
+    
+    if (content && content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        if (arrow) arrow.style.transform = 'rotate(90deg)';
+    } else if (content) {
+        content.classList.add('hidden');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+};
+
+// --- Operations inside Dropdowns ---
+
+window.deleteItem = function(dateKey, itemId) {
+    if (confirm('Remove this item from the day?')) {
+        dayLogs[dateKey].items = dayLogs[dateKey].items.filter(item => item.id !== itemId);
+        if (dayLogs[dateKey].items.length === 0) {
+            delete dayLogs[dateKey];
+        }
+        persistAndRender();
+    }
+};
+
+window.deleteEntireDay = function(dateKey) {
+    if (confirm(`Are you completely sure you want to clear all data for this day?`)) {
+        delete dayLogs[dateKey];
+        persistAndRender();
+    }
+};
+
+window.editItem = function(dateKey, itemId) {
+    const day = dayLogs[dateKey];
+    if (!day) return;
+    const item = day.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    if (btnLogDay) btnLogDay.click(); // Open menu view
+    
+    if (item.type === 'food') {
+        const tab = document.querySelector('[data-tab="tab-food"]');
+        if (tab) tab.click();
+        document.getElementById('edit-id-food').value = item.id;
+        document.getElementById('food-date-key').value = dateKey;
+        document.getElementById('food-name').value = item.name;
+        document.getElementById('food-cals').value = item.cals || '';
+    } else if (item.type === 'meds') {
+        const tab = document.querySelector('[data-tab="tab-meds"]');
+        if (tab) tab.click();
+        document.getElementById('edit-id-meds').value = item.id;
+        document.getElementById('meds-date-key').value = dateKey;
+        document.getElementById('med-name').value = item.name;
+        document.getElementById('med-dosage').value = item.dosage;
+    } else if (item.type === 'notes') {
+        const tab = document.querySelector('[data-tab="tab-notes"]');
+        if (tab) tab.click();
+        document.getElementById('edit-id-notes').value = item.id;
+        document.getElementById('notes-date-key').value = dateKey;
+        document.getElementById('note-text').value = item.text;
+    }
+};
+
+// Startup initialization
+renderLogs();
 
 // --- Accordion Logic ---
 
