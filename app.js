@@ -42,30 +42,26 @@ function saveLog(type, data, editId = null, existingDateKey = null, customTime =
     // Determine the exact time of the log
     let entryDate = new Date();
     if (customTime) {
-        // If user selected a custom time, apply it to the date being logged
         const [hours, minutes] = customTime.split(':');
         entryDate = existingDateKey ? new Date(existingDateKey) : new Date();
         entryDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
     }
     
-    // Create the day array if it doesn't exist
     if (!dayLogs[dateKey]) {
         dayLogs[dateKey] = [];
     }
 
     if (editId) {
-        // Find existing log inside that day
         const logIndex = dayLogs[dateKey].findIndex(l => l.id === editId);
         if (logIndex > -1) {
             dayLogs[dateKey][logIndex] = { 
                 ...dayLogs[dateKey][logIndex], 
                 ...data, 
-                createdAt: entryDate.toISOString(), // Update if time was changed
+                createdAt: entryDate.toISOString(), 
                 editedAt: now.toISOString() 
             };
         }
     } else {
-        // Add new log to the day
         const entry = {
             id: Date.now().toString(),
             type: type,
@@ -81,15 +77,23 @@ function saveLog(type, data, editId = null, existingDateKey = null, customTime =
     
     localStorage.setItem('groupedTimelineLogs', JSON.stringify(dayLogs));
     renderLogs();
-    btnCloseMenu.click(); // Hide menu, show main button
+    btnCloseMenu.click(); 
 }
 
 function clearForms() {
-    ['food', 'meds', 'notes'].forEach(type => {
-        document.getElementById(`form-${type}`).reset();
-        document.getElementById(`edit-id-${type}`).value = '';
-        document.getElementById(`date-key-${type}`).value = '';
-        document.getElementById(`${type}-time`).value = '';
+    // Added 'water' to the reset array
+    ['food', 'water', 'meds', 'notes'].forEach(type => {
+        const form = document.getElementById(`form-${type}`);
+        if(form) form.reset();
+        
+        const editInput = document.getElementById(`edit-id-${type}`);
+        if(editInput) editInput.value = '';
+        
+        const dateInput = document.getElementById(`date-key-${type}`);
+        if(dateInput) dateInput.value = '';
+        
+        const timeInput = document.getElementById(`${type}-time`);
+        if(timeInput) timeInput.value = '';
     });
 }
 
@@ -99,10 +103,14 @@ document.getElementById('form-food').addEventListener('submit', (e) => {
     saveLog('food', {
         name: document.getElementById('food-name').value,
         cals: document.getElementById('food-cals').value
-    }, 
-    document.getElementById('edit-id-food').value, 
-    document.getElementById('date-key-food').value,
-    document.getElementById('food-time').value);
+    }, document.getElementById('edit-id-food').value, document.getElementById('date-key-food').value, document.getElementById('food-time').value);
+});
+
+document.getElementById('form-water').addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveLog('water', {
+        amount: document.getElementById('water-amount').value
+    }, document.getElementById('edit-id-water').value, document.getElementById('date-key-water').value, document.getElementById('water-time').value);
 });
 
 document.getElementById('form-meds').addEventListener('submit', (e) => {
@@ -110,20 +118,14 @@ document.getElementById('form-meds').addEventListener('submit', (e) => {
     saveLog('meds', {
         name: document.getElementById('med-name').value,
         dosage: document.getElementById('med-dosage').value
-    }, 
-    document.getElementById('edit-id-meds').value, 
-    document.getElementById('date-key-meds').value,
-    document.getElementById('meds-time').value);
+    }, document.getElementById('edit-id-meds').value, document.getElementById('date-key-meds').value, document.getElementById('meds-time').value);
 });
 
 document.getElementById('form-notes').addEventListener('submit', (e) => {
     e.preventDefault();
     saveLog('notes', {
         text: document.getElementById('note-text').value
-    }, 
-    document.getElementById('edit-id-notes').value, 
-    document.getElementById('date-key-notes').value,
-    document.getElementById('notes-time').value);
+    }, document.getElementById('edit-id-notes').value, document.getElementById('date-key-notes').value, document.getElementById('notes-time').value);
 });
 
 // --- Rendering ---
@@ -136,7 +138,6 @@ function formatTime(isoString) {
 function renderLogs() {
     logContainer.innerHTML = '';
     
-    // Sort days so newest calendar day is at the top
     const dateKeys = Object.keys(dayLogs).sort((a, b) => new Date(b) - new Date(a));
 
     if (dateKeys.length === 0) {
@@ -148,7 +149,6 @@ function renderLogs() {
         const items = dayLogs[dateKey];
         if (items.length === 0) return;
 
-        // Create the expandable Day Group
         const groupDiv = document.createElement('div');
         groupDiv.className = 'day-group';
 
@@ -172,6 +172,9 @@ function buildLogCard(log, dateKey) {
     if (log.type === 'food') {
         titleHTML = '🍏 ' + log.name;
         contentHTML = log.cals ? `${log.cals} Calories` : 'No calories noted';
+    } else if (log.type === 'water') {
+        titleHTML = '💧 Water';
+        contentHTML = `Amount: ${log.amount}`;
     } else if (log.type === 'meds') {
         titleHTML = '💊 ' + log.name;
         contentHTML = `Dosage: ${log.dosage}`;
@@ -224,23 +227,22 @@ window.editItem = function(dateKey, id) {
     const log = dayLogs[dateKey].find(l => l.id === id);
     if (!log) return;
 
-    btnLogDay.click(); // Open the menu
+    btnLogDay.click(); 
     
-    // Switch to correct tab and populate ID/Dates
     document.querySelector(`[data-tab="tab-${log.type}"]`).click();
     document.getElementById(`edit-id-${log.type}`).value = log.id;
     document.getElementById(`date-key-${log.type}`).value = dateKey;
 
-    // Convert saved ISO string back into HH:MM format for the input
     const dateObj = new Date(log.createdAt);
     const hours = String(dateObj.getHours()).padStart(2, '0');
     const mins = String(dateObj.getMinutes()).padStart(2, '0');
     document.getElementById(`${log.type}-time`).value = `${hours}:${mins}`;
 
-    // Populate specific form fields
     if (log.type === 'food') {
         document.getElementById('food-name').value = log.name;
         document.getElementById('food-cals').value = log.cals || '';
+    } else if (log.type === 'water') {
+        document.getElementById('water-amount').value = log.amount;
     } else if (log.type === 'meds') {
         document.getElementById('med-name').value = log.name;
         document.getElementById('med-dosage').value = log.dosage;
