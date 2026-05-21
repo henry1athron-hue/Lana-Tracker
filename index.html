@@ -24,6 +24,7 @@
             <div id="logging-menu" class="hidden">
                 <div class="menu-tabs">
                     <button class="tab-btn active" data-tab="tab-food">Food</button>
+                    <button class="tab-btn" data-tab="tab-water">Water</button>
                     <button class="tab-btn" data-tab="tab-meds">Meds</button>
                     <button class="tab-btn" data-tab="tab-notes">Notes</button>
                 </div>
@@ -39,6 +40,19 @@
                             <input type="time" id="food-time">
                         </div>
                         <button type="submit" class="save-btn">Save Food</button>
+                    </form>
+                </div>
+
+                <div class="tab-content" id="tab-water">
+                    <form id="form-water">
+                        <input type="hidden" id="edit-id-water">
+                        <input type="hidden" id="date-key-water">
+                        <input type="text" id="water-amount" placeholder="Amount (e.g., 8oz, 1 bottle)" required>
+                        <div class="time-group">
+                            <label for="water-time">Time of entry:</label>
+                            <input type="time" id="water-time">
+                        </div>
+                        <button type="submit" class="save-btn" style="background: #3498db;">Save Water</button>
                     </form>
                 </div>
 
