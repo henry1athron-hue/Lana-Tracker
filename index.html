@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Lana Tracker</title>
+    <title>Daily Tracker</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
@@ -33,12 +33,14 @@
                     <form id="form-food">
                         <input type="hidden" id="edit-id-food">
                         <input type="hidden" id="date-key-food">
+                        
+                        <div class="datetime-row">
+                            <div class="time-group"><label>Date:</label><input type="date" id="food-date" required></div>
+                            <div class="time-group"><label>Time:</label><input type="time" id="food-time" required></div>
+                        </div>
+
                         <input type="text" id="food-name" placeholder="What did you eat?" required>
                         <input type="text" id="food-cals" placeholder="Calories (Optional)">
-                        <div class="time-group">
-                            <label for="food-time">Time of entry:</label>
-                            <input type="time" id="food-time">
-                        </div>
                         <button type="submit" class="save-btn">Save Food</button>
                     </form>
                 </div>
@@ -47,11 +49,13 @@
                     <form id="form-water">
                         <input type="hidden" id="edit-id-water">
                         <input type="hidden" id="date-key-water">
-                        <input type="text" id="water-amount" placeholder="Amount (e.g., 8oz, 1 bottle)" required>
-                        <div class="time-group">
-                            <label for="water-time">Time of entry:</label>
-                            <input type="time" id="water-time">
+                        
+                        <div class="datetime-row">
+                            <div class="time-group"><label>Date:</label><input type="date" id="water-date" required></div>
+                            <div class="time-group"><label>Time:</label><input type="time" id="water-time" required></div>
                         </div>
+
+                        <input type="text" id="water-amount" placeholder="Amount (e.g., 8oz, 1 bottle)" required>
                         <button type="submit" class="save-btn" style="background: #3498db;">Save Water</button>
                     </form>
                 </div>
@@ -60,12 +64,14 @@
                     <form id="form-meds">
                         <input type="hidden" id="edit-id-meds">
                         <input type="hidden" id="date-key-meds">
+                        
+                        <div class="datetime-row">
+                            <div class="time-group"><label>Date:</label><input type="date" id="meds-date" required></div>
+                            <div class="time-group"><label>Time:</label><input type="time" id="meds-time" required></div>
+                        </div>
+
                         <input type="text" id="med-name" placeholder="Medication Name" required>
                         <input type="text" id="med-dosage" placeholder="Dosage (e.g., 200mg)" required>
-                        <div class="time-group">
-                            <label for="meds-time">Time of entry:</label>
-                            <input type="time" id="meds-time">
-                        </div>
                         <button type="submit" class="save-btn">Save Medication</button>
                     </form>
                 </div>
@@ -74,11 +80,13 @@
                     <form id="form-notes">
                         <input type="hidden" id="edit-id-notes">
                         <input type="hidden" id="date-key-notes">
-                        <textarea id="note-text" placeholder="How are you feeling right now?" rows="5" required></textarea>
-                        <div class="time-group">
-                            <label for="notes-time">Time of entry:</label>
-                            <input type="time" id="notes-time">
+                        
+                        <div class="datetime-row">
+                            <div class="time-group"><label>Date:</label><input type="date" id="notes-date" required></div>
+                            <div class="time-group"><label>Time:</label><input type="time" id="notes-time" required></div>
                         </div>
+
+                        <textarea id="note-text" placeholder="How are you feeling right now?" rows="5" required></textarea>
                         <button type="submit" class="save-btn">Save Note</button>
                     </form>
                 </div>
