@@ -1,217 +1,227 @@
-// Register Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("Service Worker Registered"))
-        .catch(err => console.error("Service Worker Failed", err));
-}
+// Data Store: Grouped by date (e.g., "11/10/2026")
+let dayLogs = JSON.parse(localStorage.getItem('groupedTimelineLogs')) || {};
 
-// Navigation Logic
-const navBtns = document.querySelectorAll('.nav-btn');
-const views = document.querySelectorAll('.view');
-const headerTitle = document.getElementById('header-title');
+// DOM Elements
+const logContainer = document.getElementById('log-container');
+const btnLogDay = document.getElementById('btn-log-day');
+const loggingMenu = document.getElementById('logging-menu');
+const btnCloseMenu = document.getElementById('btn-close-menu');
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
 
-navBtns.forEach(btn => {
+// --- UI Interactions ---
+
+btnLogDay.addEventListener('click', () => {
+    loggingMenu.classList.remove('hidden');
+    btnLogDay.style.display = 'none';
+    clearForms();
+});
+
+btnCloseMenu.addEventListener('click', () => {
+    loggingMenu.classList.add('hidden');
+    btnLogDay.style.display = 'block';
+    clearForms();
+});
+
+tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        navBtns.forEach(b => b.classList.remove('active'));
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
         btn.classList.add('active');
-
-        const targetId = btn.getAttribute('data-target');
-        views.forEach(v => v.classList.remove('active'));
-        document.getElementById(targetId).classList.add('active');
-
-        headerTitle.textContent = btn.getAttribute('data-title');
-
-        if(targetId === 'view-history') {
-            renderLogs();
-        }
+        document.getElementById(btn.dataset.tab).classList.add('active');
     });
 });
 
-// Data Management: Structured by Day Keys
-let dailyLogs = JSON.parse(localStorage.getItem('dailyGroupedLogs')) || {};
+// --- Data Management ---
 
 function saveLog(type, data, editId = null, existingDateKey = null) {
     const now = new Date();
+    // Use the existing date if editing, otherwise assign to today's date string
+    const dateKey = existingDateKey || now.toLocaleDateString();
     
-    // Assign to its original day if editing, otherwise assign to today
-    const dateKey = existingDateKey || now.toLocaleDateString('en-US').replace(/\//g, '-'); 
-    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-    if (!dailyLogs[dateKey]) {
-        dailyLogs[dateKey] = [];
+    // Create the day array if it doesn't exist
+    if (!dayLogs[dateKey]) {
+        dayLogs[dateKey] = [];
     }
 
-    if (editId && editId !== "") {
-        // Find existing item and modify it
-        const itemIndex = dailyLogs[dateKey].findIndex(item => item.id === editId);
-        if (itemIndex > -1) {
-            dailyLogs[dateKey][itemIndex] = {
-                ...dailyLogs[dateKey][itemIndex],
-                ...data,
-                editedAt: timeStr
+    if (editId) {
+        // Find existing log inside that day
+        const logIndex = dayLogs[dateKey].findIndex(l => l.id === editId);
+        if (logIndex > -1) {
+            dayLogs[dateKey][logIndex] = { 
+                ...dayLogs[dateKey][logIndex], 
+                ...data, 
+                editedAt: now.toISOString() 
             };
         }
     } else {
-        // Create new item
+        // Add new log to the day
         const entry = {
             id: Date.now().toString(),
             type: type,
-            createdAt: timeStr,
+            createdAt: now.toISOString(),
             editedAt: null,
             ...data
         };
-        dailyLogs[dateKey].push(entry);
+        dayLogs[dateKey].push(entry);
     }
 
-    localStorage.setItem('dailyGroupedLogs', JSON.stringify(dailyLogs));
-    clearAllForms();
+    // Sort logs within the day: newest first
+    dayLogs[dateKey].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    localStorage.setItem('groupedTimelineLogs', JSON.stringify(dayLogs));
+    renderLogs();
+    btnCloseMenu.click(); // Hide menu, show main button
 }
 
-function clearAllForms() {
-    document.getElementById('form-food').reset();
-    document.getElementById('edit-id-food').value = '';
-    document.getElementById('date-key-food').value = '';
-
-    document.getElementById('form-meds').reset();
-    document.getElementById('edit-id-meds').value = '';
-    document.getElementById('date-key-meds').value = '';
-
-    document.getElementById('form-notes').reset();
-    document.getElementById('edit-id-notes').value = '';
-    document.getElementById('date-key-notes').value = '';
+function clearForms() {
+    ['food', 'meds', 'notes'].forEach(type => {
+        document.getElementById(`form-${type}`).reset();
+        document.getElementById(`edit-id-${type}`).value = '';
+        document.getElementById(`date-key-${type}`).value = '';
+    });
 }
 
-// Form Submissions
+// Form Submit Listeners
 document.getElementById('form-food').addEventListener('submit', (e) => {
     e.preventDefault();
-    const editId = document.getElementById('edit-id-food').value;
-    const dateKey = document.getElementById('date-key-food').value;
     saveLog('food', {
         name: document.getElementById('food-name').value,
-        details: document.getElementById('food-details').value
-    }, editId, dateKey);
-    alert('Food logged!');
+        cals: document.getElementById('food-cals').value
+    }, document.getElementById('edit-id-food').value, document.getElementById('date-key-food').value);
 });
 
 document.getElementById('form-meds').addEventListener('submit', (e) => {
     e.preventDefault();
-    const editId = document.getElementById('edit-id-meds').value;
-    const dateKey = document.getElementById('date-key-meds').value;
     saveLog('meds', {
         name: document.getElementById('med-name').value,
         dosage: document.getElementById('med-dosage').value
-    }, editId, dateKey);
-    alert('Medication logged!');
+    }, document.getElementById('edit-id-meds').value, document.getElementById('date-key-meds').value);
 });
 
 document.getElementById('form-notes').addEventListener('submit', (e) => {
     e.preventDefault();
-    const editId = document.getElementById('edit-id-notes').value;
-    const dateKey = document.getElementById('date-key-notes').value;
     saveLog('notes', {
         text: document.getElementById('note-text').value
-    }, editId, dateKey);
-    alert('Note saved!');
+    }, document.getElementById('edit-id-notes').value, document.getElementById('date-key-notes').value);
 });
 
-// Rendering Timeline Logs
-const logContainer = document.getElementById('log-container');
+// --- Rendering ---
+
+function formatTime(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
 
 function renderLogs() {
     logContainer.innerHTML = '';
-    const dateKeys = Object.keys(dailyLogs).sort((a, b) => new Date(b.replace(/-/g, '/')) - new Date(a.replace(/-/g, '/')));
+    
+    // Sort days so newest calendar day is at the top
+    const dateKeys = Object.keys(dayLogs).sort((a, b) => new Date(b) - new Date(a));
 
     if (dateKeys.length === 0) {
-        logContainer.innerHTML = '<p style="text-align:center; color:#7f8c8d; padding: 2rem;">No entries found.</p>';
+        logContainer.innerHTML = '<p style="text-align:center; color:#777; margin-top:2rem;">Your timeline is empty. Start logging!</p>';
         return;
     }
 
     dateKeys.forEach(dateKey => {
-        const items = dailyLogs[dateKey];
+        const items = dayLogs[dateKey];
         if (items.length === 0) return;
 
-        // Group container
+        // Create the expandable Day Group
         const groupDiv = document.createElement('div');
-        groupDiv.className = 'day-group-container';
-        
-        // Header block
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'day-header-toggle';
-        headerDiv.textContent = dateKey.replace(/-/g, '/'); // Formats back to 11/10/2026
-        headerDiv.addEventListener('click', () => {
-            groupDiv.classList.toggle('collapsed');
-        });
+        groupDiv.className = 'day-group';
 
-        // Expanded content workspace
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'day-content-area';
-
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = `log-card ${item.type}`;
-
-            let contentHTML = '';
-            if (item.type === 'food') {
-                contentHTML = `<div><div class="log-title">🍏 ${item.name}</div><div class="log-detail">${item.details || ''}</div></div>`;
-            } else if (item.type === 'meds') {
-                contentHTML = `<div><div class="log-title">💊 ${item.name}</div><div class="log-detail">${item.dosage}</div></div>`;
-            } else if (item.type === 'notes') {
-                contentHTML = `<div><div class="log-title">📝 Note</div><div class="log-detail">${item.text}</div></div>`;
-            }
-
-            const editTimestamp = item.editedAt ? `<span style="color: #e67e22; font-size:0.75rem; block-size:auto;"> (Edited: ${item.editedAt})</span>` : '';
-
-            card.innerHTML = `
-                <div style="flex:1;">
-                    <div class="log-meta">Added: ${item.createdAt} ${editTimestamp}</div>
-                    ${contentHTML}
-                </div>
-                <div style="display:flex; gap: 4px;">
-                    <button class="delete-btn" style="background:#3498db;" onclick="editItem('${dateKey}', '${item.id}')">✏️</button>
-                    <button class="delete-btn" onclick="deleteItem('${dateKey}', '${item.id}')">X</button>
-                </div>
-            `;
-            contentDiv.appendChild(card);
-        });
-
-        groupDiv.appendChild(headerDiv);
-        groupDiv.appendChild(contentDiv);
+        groupDiv.innerHTML = `
+            <div class="day-header" onclick="toggleDay('${dateKey}')">
+                <span>📅 ${dateKey}</span>
+                <span id="arrow-${dateKey.replace(/\//g, '-')}">▼</span>
+            </div>
+            <div class="day-content" id="content-${dateKey.replace(/\//g, '-')}">
+                ${items.map(item => buildLogCard(item, dateKey)).join('')}
+            </div>
+        `;
         logContainer.appendChild(groupDiv);
     });
 }
 
-// Global actions exposed safely to window scope
+function buildLogCard(log, dateKey) {
+    let titleHTML = '';
+    let contentHTML = '';
+
+    if (log.type === 'food') {
+        titleHTML = '🍏 ' + log.name;
+        contentHTML = log.cals ? `${log.cals} Calories` : 'No calories noted';
+    } else if (log.type === 'meds') {
+        titleHTML = '💊 ' + log.name;
+        contentHTML = `Dosage: ${log.dosage}`;
+    } else if (log.type === 'notes') {
+        titleHTML = '📝 Note';
+        contentHTML = log.text;
+    }
+
+    const editTimeHTML = log.editedAt ? `<span class="log-edit-time"> (Edited at ${formatTime(log.editedAt)})</span>` : '';
+
+    return `
+        <div class="log-card ${log.type}">
+            <div class="log-meta">Added: ${formatTime(log.createdAt)}${editTimeHTML}</div>
+            <div class="log-title">${titleHTML}</div>
+            <div class="log-body">${contentHTML}</div>
+            <div class="card-actions">
+                <button class="btn-small btn-edit" onclick="editItem('${dateKey}', '${log.id}')">Edit</button>
+                <button class="btn-small btn-delete" onclick="deleteItem('${dateKey}', '${log.id}')">Delete</button>
+            </div>
+        </div>
+    `;
+}
+
+// --- Accordion Toggle ---
+window.toggleDay = function(dateKey) {
+    const safeKey = dateKey.replace(/\//g, '-');
+    const content = document.getElementById(`content-${safeKey}`);
+    const arrow = document.getElementById(`arrow-${safeKey}`);
+    
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        arrow.textContent = '▼';
+    } else {
+        content.classList.add('hidden');
+        arrow.textContent = '▶';
+    }
+};
+
+// --- Edit & Delete ---
 window.deleteItem = function(dateKey, id) {
-    if(confirm('Delete this entry?')) {
-        dailyLogs[dateKey] = dailyLogs[dateKey].filter(item => item.id !== id);
-        if(dailyLogs[dateKey].length === 0) {
-            delete dailyLogs[dateKey];
-        }
-        localStorage.setItem('dailyGroupedLogs', JSON.stringify(dailyLogs));
+    if(confirm('Are you sure you want to delete this?')) {
+        dayLogs[dateKey] = dayLogs[dateKey].filter(l => l.id !== id);
+        if (dayLogs[dateKey].length === 0) delete dayLogs[dateKey];
+        localStorage.setItem('groupedTimelineLogs', JSON.stringify(dayLogs));
         renderLogs();
     }
-}
+};
 
 window.editItem = function(dateKey, id) {
-    const item = dailyLogs[dateKey].find(item => item.id === id);
-    if(!item) return;
+    const log = dayLogs[dateKey].find(l => l.id === id);
+    if (!log) return;
 
-    if (item.type === 'food') {
-        document.querySelector('[data-target="view-food"]').click();
-        document.getElementById('edit-id-food').value = item.id;
-        document.getElementById('date-key-food').value = dateKey;
-        document.getElementById('food-name').value = item.name;
-        document.getElementById('food-details').value = item.details || '';
-    } else if (item.type === 'meds') {
-        document.querySelector('[data-target="view-meds"]').click();
-        document.getElementById('edit-id-meds').value = item.id;
-        document.getElementById('date-key-meds').value = dateKey;
-        document.getElementById('med-name').value = item.name;
-        document.getElementById('med-dosage').value = item.dosage;
-    } else if (item.type === 'notes') {
-        document.querySelector('[data-target="view-notes"]').click();
-        document.getElementById('edit-id-notes').value = item.id;
-        document.getElementById('date-key-notes').value = dateKey;
-        document.getElementById('note-text').value = item.text;
+    btnLogDay.click(); // Open the menu
+    
+    // Switch to correct tab and populate
+    document.querySelector(`[data-tab="tab-${log.type}"]`).click();
+    document.getElementById(`edit-id-${log.type}`).value = log.id;
+    document.getElementById(`date-key-${log.type}`).value = dateKey;
+
+    if (log.type === 'food') {
+        document.getElementById('food-name').value = log.name;
+        document.getElementById('food-cals').value = log.cals || '';
+    } else if (log.type === 'meds') {
+        document.getElementById('med-name').value = log.name;
+        document.getElementById('med-dosage').value = log.dosage;
+    } else if (log.type === 'notes') {
+        document.getElementById('note-text').value = log.text;
     }
-}
+};
+
+// Initial Render
+renderLogs();
