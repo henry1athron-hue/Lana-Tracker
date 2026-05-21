@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Lana Tracker</title>
+    <title>Daily Tracker</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
 </head>
 <body>
     <div class="app-layout">
         <aside class="log-sidebar">
-            <div class="sidebar-header"><h2>Your Timeline</h2></div>
-            <div id="log-container" class="log-scroll-area"></div>
+            <div class="sidebar-header">
+                <h2>Your Timeline</h2>
+            </div>
+            <div id="log-container" class="log-scroll-area">
+                </div>
         </aside>
 
         <main class="action-area">
             <button id="btn-log-day" class="action-btn">Log Day</button>
+
             <div id="logging-menu" class="hidden">
                 <div class="menu-tabs">
                     <button class="tab-btn active" data-tab="tab-food">Food</button>
@@ -26,49 +31,63 @@
 
                 <div class="tab-content active" id="tab-food">
                     <form id="form-food">
-                        <input type="hidden" id="edit-id-food"><input type="hidden" id="date-key-food">
-                        <div class="time-group"><label>Date:</label><input type="date" id="date-food" required></div>
-                        <div class="time-group"><label>Time:</label><input type="time" id="time-food" required></div>
+                        <input type="hidden" id="edit-id-food">
+                        <input type="hidden" id="date-key-food">
                         <input type="text" id="food-name" placeholder="What did you eat?" required>
-                        <input type="text" id="food-cals" placeholder="Calories">
+                        <input type="text" id="food-cals" placeholder="Calories (Optional)">
+                        <div class="time-group">
+                            <label for="food-time">Time of entry:</label>
+                            <input type="time" id="food-time">
+                        </div>
                         <button type="submit" class="save-btn">Save Food</button>
                     </form>
                 </div>
 
                 <div class="tab-content" id="tab-water">
                     <form id="form-water">
-                        <input type="hidden" id="edit-id-water"><input type="hidden" id="date-key-water">
-                        <div class="time-group"><label>Date:</label><input type="date" id="date-water" required></div>
-                        <div class="time-group"><label>Time:</label><input type="time" id="time-water" required></div>
-                        <input type="text" id="water-amount" placeholder="Amount (e.g., 8oz)" required>
-                        <button type="submit" class="save-btn">Save Water</button>
+                        <input type="hidden" id="edit-id-water">
+                        <input type="hidden" id="date-key-water">
+                        <input type="text" id="water-amount" placeholder="Amount (e.g., 8oz, 1 bottle)" required>
+                        <div class="time-group">
+                            <label for="water-time">Time of entry:</label>
+                            <input type="time" id="water-time">
+                        </div>
+                        <button type="submit" class="save-btn" style="background: #3498db;">Save Water</button>
                     </form>
                 </div>
 
                 <div class="tab-content" id="tab-meds">
                     <form id="form-meds">
-                        <input type="hidden" id="edit-id-meds"><input type="hidden" id="date-key-meds">
-                        <div class="time-group"><label>Date:</label><input type="date" id="date-meds" required></div>
-                        <div class="time-group"><label>Time:</label><input type="time" id="meds-time" required></div>
-                        <input type="text" id="med-name" placeholder="Medication" required>
-                        <input type="text" id="med-dosage" placeholder="Dosage" required>
+                        <input type="hidden" id="edit-id-meds">
+                        <input type="hidden" id="date-key-meds">
+                        <input type="text" id="med-name" placeholder="Medication Name" required>
+                        <input type="text" id="med-dosage" placeholder="Dosage (e.g., 200mg)" required>
+                        <div class="time-group">
+                            <label for="meds-time">Time of entry:</label>
+                            <input type="time" id="meds-time">
+                        </div>
                         <button type="submit" class="save-btn">Save Medication</button>
                     </form>
                 </div>
 
                 <div class="tab-content" id="tab-notes">
                     <form id="form-notes">
-                        <input type="hidden" id="edit-id-notes"><input type="hidden" id="date-key-notes">
-                        <div class="time-group"><label>Date:</label><input type="date" id="date-notes" required></div>
-                        <div class="time-group"><label>Time:</label><input type="time" id="time-notes" required></div>
-                        <textarea id="note-text" placeholder="Note" rows="3" required></textarea>
+                        <input type="hidden" id="edit-id-notes">
+                        <input type="hidden" id="date-key-notes">
+                        <textarea id="note-text" placeholder="How are you feeling right now?" rows="5" required></textarea>
+                        <div class="time-group">
+                            <label for="notes-time">Time of entry:</label>
+                            <input type="time" id="notes-time">
+                        </div>
                         <button type="submit" class="save-btn">Save Note</button>
                     </form>
                 </div>
+                
                 <button id="btn-close-menu" class="close-btn">Cancel</button>
             </div>
         </main>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>
