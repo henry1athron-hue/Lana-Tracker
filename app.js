@@ -1,4 +1,4 @@
-// Data Store: Grouped by date (e.g., "11/10/2026")
+// Data Store: Grouped by date key strings (e.g., "11-10-2026")
 let dayLogs = JSON.parse(localStorage.getItem('groupedTimelineLogs')) || {};
 
 // DOM Elements
@@ -15,6 +15,7 @@ btnLogDay.addEventListener('click', () => {
     loggingMenu.classList.remove('hidden');
     btnLogDay.style.display = 'none';
     clearForms();
+    setLiveDateTimeDefaults(); // Pre-load accurate live tracking context
 });
 
 btnCloseMenu.addEventListener('click', () => {
@@ -33,33 +34,65 @@ tabBtns.forEach(btn => {
     });
 });
 
+// Sets input field defaults to current precise live moments
+function setLiveDateTimeDefaults() {
+    const now = new Date();
+    const localISODate = now.toLocaleDateString('sv-SE'); // Formats safely to YYYY-MM-DD
+    const localTime = now.toTimeString().substring(0, 5); // Formats safely to HH:MM
+
+    ['food', 'water', 'meds', 'notes'].forEach(type => {
+        const dateInput = document.getElementById(`${type}-date`);
+        const timeInput = document.getElementById(`${type}-time`);
+        if (dateInput && !dateInput.value) dateInput.value = localISODate;
+        if (timeInput && !timeInput.value) timeInput.value = localTime;
+    });
+}
+
 // --- Data Management ---
 
-function saveLog(type, data, editId = null, existingDateKey = null, customTime = null) {
+function saveLog(type, data, editId = null, oldDateKey = null, inputDateStr = null, inputTimeStr = null) {
     const now = new Date();
-    const dateKey = existingDateKey || now.toLocaleDateString();
     
-    // Determine the exact time of the log
-    let entryDate = new Date();
-    if (customTime) {
-        const [hours, minutes] = customTime.split(':');
-        entryDate = existingDateKey ? new Date(existingDateKey) : new Date();
+    // Parse the designated date setup safely
+    let targetParts = inputDateStr.split('-'); 
+    let entryDate = new Date(targetParts[0], targetParts[1] - 1, targetParts[2]);
+    
+    if (inputTimeStr) {
+        const [hours, minutes] = inputTimeStr.split(':');
         entryDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
     }
+
+    // Standardized safe text grouping key representation (MM/DD/YYYY)
+    const newDateKey = entryDate.toLocaleDateString('en-US');
+
+    // If an item moved dates via edit adjustments, purge it from its legacy listing context
+    if (editId && oldDateKey && oldDateKey !== newDateKey && dayLogs[oldDateKey]) {
+        dayLogs[oldDateKey] = dayLogs[oldDateKey].filter(l => l.id !== editId);
+        if (dayLogs[oldDateKey].length === 0) delete dayLogs[oldDateKey];
+    }
     
-    if (!dayLogs[dateKey]) {
-        dayLogs[dateKey] = [];
+    if (!dayLogs[newDateKey]) {
+        dayLogs[newDateKey] = [];
     }
 
     if (editId) {
-        const logIndex = dayLogs[dateKey].findIndex(l => l.id === editId);
+        const logIndex = dayLogs[newDateKey].findIndex(l => l.id === editId);
         if (logIndex > -1) {
-            dayLogs[dateKey][logIndex] = { 
-                ...dayLogs[dateKey][logIndex], 
+            dayLogs[newDateKey][logIndex] = { 
+                ...dayLogs[newDateKey][logIndex], 
                 ...data, 
                 createdAt: entryDate.toISOString(), 
                 editedAt: now.toISOString() 
             };
+        } else {
+            // Re-injection layout path if migrated into a newly targeted daily area entirely
+            dayLogs[newDateKey].push({
+                id: editId,
+                type: type,
+                createdAt: entryDate.toISOString(),
+                editedAt: now.toISOString(),
+                ...data
+            });
         }
     } else {
         const entry = {
@@ -69,11 +102,11 @@ function saveLog(type, data, editId = null, existingDateKey = null, customTime =
             editedAt: null,
             ...data
         };
-        dayLogs[dateKey].push(entry);
+        dayLogs[newDateKey].push(entry);
     }
 
-    // Sort logs within the day: newest time at the top
-    dayLogs[dateKey].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Keep items clean chronological: Newest entries always listed first
+    dayLogs[newDateKey].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     localStorage.setItem('groupedTimelineLogs', JSON.stringify(dayLogs));
     renderLogs();
@@ -81,7 +114,6 @@ function saveLog(type, data, editId = null, existingDateKey = null, customTime =
 }
 
 function clearForms() {
-    // Added 'water' to the reset array
     ['food', 'water', 'meds', 'notes'].forEach(type => {
         const form = document.getElementById(`form-${type}`);
         if(form) form.reset();
@@ -89,11 +121,14 @@ function clearForms() {
         const editInput = document.getElementById(`edit-id-${type}`);
         if(editInput) editInput.value = '';
         
-        const dateInput = document.getElementById(`date-key-${type}`);
-        if(dateInput) dateInput.value = '';
+        const dateKeyInput = document.getElementById(`date-key-${type}`);
+        if(dateKeyInput) dateKeyInput.value = '';
         
-        const timeInput = document.getElementById(`${type}-time`);
-        if(timeInput) timeInput.value = '';
+        const dInput = document.getElementById(`${type}-date`);
+        if(dInput) dInput.value = '';
+
+        const tInput = document.getElementById(`${type}-time`);
+        if(tInput) tInput.value = '';
     });
 }
 
@@ -103,14 +138,14 @@ document.getElementById('form-food').addEventListener('submit', (e) => {
     saveLog('food', {
         name: document.getElementById('food-name').value,
         cals: document.getElementById('food-cals').value
-    }, document.getElementById('edit-id-food').value, document.getElementById('date-key-food').value, document.getElementById('food-time').value);
+    }, document.getElementById('edit-id-food').value, document.getElementById('date-key-food').value, document.getElementById('food-date').value, document.getElementById('food-time').value);
 });
 
 document.getElementById('form-water').addEventListener('submit', (e) => {
     e.preventDefault();
     saveLog('water', {
         amount: document.getElementById('water-amount').value
-    }, document.getElementById('edit-id-water').value, document.getElementById('date-key-water').value, document.getElementById('water-time').value);
+    }, document.getElementById('edit-id-water').value, document.getElementById('date-key-water').value, document.getElementById('water-date').value, document.getElementById('water-time').value);
 });
 
 document.getElementById('form-meds').addEventListener('submit', (e) => {
@@ -118,14 +153,14 @@ document.getElementById('form-meds').addEventListener('submit', (e) => {
     saveLog('meds', {
         name: document.getElementById('med-name').value,
         dosage: document.getElementById('med-dosage').value
-    }, document.getElementById('edit-id-meds').value, document.getElementById('date-key-meds').value, document.getElementById('meds-time').value);
+    }, document.getElementById('edit-id-meds').value, document.getElementById('date-key-meds').value, document.getElementById('meds-date').value, document.getElementById('meds-time').value);
 });
 
 document.getElementById('form-notes').addEventListener('submit', (e) => {
     e.preventDefault();
     saveLog('notes', {
         text: document.getElementById('note-text').value
-    }, document.getElementById('edit-id-notes').value, document.getElementById('date-key-notes').value, document.getElementById('notes-time').value);
+    }, document.getElementById('edit-id-notes').value, document.getElementById('date-key-notes').value, document.getElementById('notes-date').value, document.getElementById('notes-time').value);
 });
 
 // --- Rendering ---
@@ -138,6 +173,7 @@ function formatTime(isoString) {
 function renderLogs() {
     logContainer.innerHTML = '';
     
+    // Sort keys so the newest calendar days sit proudly at top level
     const dateKeys = Object.keys(dayLogs).sort((a, b) => new Date(b) - new Date(a));
 
     if (dateKeys.length === 0) {
@@ -152,12 +188,15 @@ function renderLogs() {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'day-group';
 
+        // Swap slashes dynamically to create clean accordion lookups safely
+        const htmlSafeID = dateKey.replace(/\//g, '-');
+
         groupDiv.innerHTML = `
             <div class="day-header" onclick="toggleDay('${dateKey}')">
                 <span>📅 ${dateKey}</span>
-                <span id="arrow-${dateKey.replace(/\//g, '-')}">▼</span>
+                <span id="arrow-${htmlSafeID}">▼</span>
             </div>
-            <div class="day-content" id="content-${dateKey.replace(/\//g, '-')}">
+            <div class="day-content" id="content-${htmlSafeID}">
                 ${items.map(item => buildLogCard(item, dateKey)).join('')}
             </div>
         `;
@@ -227,15 +266,19 @@ window.editItem = function(dateKey, id) {
     const log = dayLogs[dateKey].find(l => l.id === id);
     if (!log) return;
 
-    btnLogDay.click(); 
+    btnLogDay.click(); // Open system view input
     
     document.querySelector(`[data-tab="tab-${log.type}"]`).click();
     document.getElementById(`edit-id-${log.type}`).value = log.id;
     document.getElementById(`date-key-${log.type}`).value = dateKey;
 
+    // Convert date object values accurately into correct presentation forms
     const dateObj = new Date(log.createdAt);
+    const localISODate = dateObj.toLocaleDateString('sv-SE');
     const hours = String(dateObj.getHours()).padStart(2, '0');
     const mins = String(dateObj.getMinutes()).padStart(2, '0');
+    
+    document.getElementById(`${log.type}-date`).value = localISODate;
     document.getElementById(`${log.type}-time`).value = `${hours}:${mins}`;
 
     if (log.type === 'food') {
@@ -251,5 +294,5 @@ window.editItem = function(dateKey, id) {
     }
 };
 
-// Initial Render
+// Initial Render on startup
 renderLogs();
