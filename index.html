@@ -34,6 +34,10 @@
                         <input type="hidden" id="date-key-food">
                         <input type="text" id="food-name" placeholder="What did you eat?" required>
                         <input type="text" id="food-cals" placeholder="Calories (Optional)">
+                        <div class="time-group">
+                            <label for="food-time">Time of entry:</label>
+                            <input type="time" id="food-time">
+                        </div>
                         <button type="submit" class="save-btn">Save Food</button>
                     </form>
                 </div>
@@ -44,6 +48,10 @@
                         <input type="hidden" id="date-key-meds">
                         <input type="text" id="med-name" placeholder="Medication Name" required>
                         <input type="text" id="med-dosage" placeholder="Dosage (e.g., 200mg)" required>
+                        <div class="time-group">
+                            <label for="meds-time">Time of entry:</label>
+                            <input type="time" id="meds-time">
+                        </div>
                         <button type="submit" class="save-btn">Save Medication</button>
                     </form>
                 </div>
@@ -53,6 +61,10 @@
                         <input type="hidden" id="edit-id-notes">
                         <input type="hidden" id="date-key-notes">
                         <textarea id="note-text" placeholder="How are you feeling right now?" rows="5" required></textarea>
+                        <div class="time-group">
+                            <label for="notes-time">Time of entry:</label>
+                            <input type="time" id="notes-time">
+                        </div>
                         <button type="submit" class="save-btn">Save Note</button>
                     </form>
                 </div>
